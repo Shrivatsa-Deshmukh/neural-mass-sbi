@@ -1,0 +1,93 @@
+<svg viewBox="0 0 900 520" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI', system-ui, sans-serif">
+
+  <!-- Background -->
+  <rect width="900" height="520" fill="#0d1117"/>
+
+  <!-- Title -->
+  <text x="450" y="44" text-anchor="middle" font-size="17" font-weight="600" fill="#e6edf3" letter-spacing="0.3">Simulation-Based Inference Pipeline</text>
+  <text x="450" y="64" text-anchor="middle" font-size="11" fill="#484f58" letter-spacing="0.4">JANSEN-RIT NEURAL MASS MODEL</text>
+
+  <!-- ─── Row 1: Prior → Simulator → Forward Model ─── -->
+
+  <!-- Prior -->
+  <rect x="40" y="110" width="160" height="90" rx="10" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
+  <text x="120" y="145" text-anchor="middle" font-size="10" fill="#484f58" letter-spacing="0.8">STAGE 1</text>
+  <text x="120" y="165" text-anchor="middle" font-size="14" font-weight="600" fill="#e6edf3">Prior Sampling</text>
+  <text x="120" y="183" text-anchor="middle" font-size="10" fill="#7d8590">Sobol sequences</text>
+
+  <!-- Arrow 1→2 -->
+  <line x1="200" y1="155" x2="258" y2="155" stroke="#30363d" stroke-width="1.5"/>
+  <polygon points="258,150 268,155 258,160" fill="#30363d"/>
+
+  <!-- Simulator -->
+  <rect x="268" y="110" width="160" height="90" rx="10" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
+  <text x="348" y="145" text-anchor="middle" font-size="10" fill="#484f58" letter-spacing="0.8">STAGE 2</text>
+  <text x="348" y="165" text-anchor="middle" font-size="14" font-weight="600" fill="#e6edf3">Simulator</text>
+  <text x="348" y="183" text-anchor="middle" font-size="10" fill="#7d8590">Neural mass model</text>
+
+  <!-- Arrow 2→3 -->
+  <line x1="428" y1="155" x2="486" y2="155" stroke="#30363d" stroke-width="1.5"/>
+  <polygon points="486,150 496,155 486,160" fill="#30363d"/>
+
+  <!-- Forward Model -->
+  <rect x="496" y="110" width="160" height="90" rx="10" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
+  <text x="576" y="145" text-anchor="middle" font-size="10" fill="#484f58" letter-spacing="0.8">STAGE 3</text>
+  <text x="576" y="165" text-anchor="middle" font-size="14" font-weight="600" fill="#e6edf3">Forward Model</text>
+  <text x="576" y="183" text-anchor="middle" font-size="10" fill="#7d8590">Source → sensor space</text>
+
+  <!-- ─── Bend: Forward Model down then left to Noise ─── -->
+  <!-- vertical leg from stage 3 down -->
+  <line x1="736" y1="155" x2="820" y2="155" stroke="#30363d" stroke-width="1.5"/>
+  <line x1="820" y1="155" x2="820" y2="320" stroke="#30363d" stroke-width="1.5"/>
+  <line x1="820" y1="320" x2="726" y2="320" stroke="#30363d" stroke-width="1.5"/>
+  <polygon points="726,315 716,320 726,325" fill="#30363d"/>
+
+  <!-- ─── Row 2 (right to left): Noise → Embedding → Posterior ─── -->
+
+  <!-- Noise -->
+  <rect x="556" y="275" width="160" height="90" rx="10" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
+  <text x="636" y="310" text-anchor="middle" font-size="10" fill="#484f58" letter-spacing="0.8">STAGE 4</text>
+  <text x="636" y="330" text-anchor="middle" font-size="14" font-weight="600" fill="#e6edf3">Noise Model</text>
+  <text x="636" y="348" text-anchor="middle" font-size="10" fill="#7d8590">Observation corruption</text>
+
+  <!-- Arrow Noise→Embedding -->
+  <line x1="556" y1="320" x2="498" y2="320" stroke="#30363d" stroke-width="1.5"/>
+  <polygon points="498,315 488,320 498,325" fill="#30363d"/>
+
+  <!-- Embedding -->
+  <rect x="328" y="275" width="160" height="90" rx="10" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
+  <text x="408" y="310" text-anchor="middle" font-size="10" fill="#484f58" letter-spacing="0.8">STAGE 5</text>
+  <text x="408" y="330" text-anchor="middle" font-size="14" font-weight="600" fill="#e6edf3">Embedding</text>
+  <text x="408" y="348" text-anchor="middle" font-size="10" fill="#7d8590">Summary statistics</text>
+
+  <!-- Arrow Embedding→Posterior -->
+  <line x1="328" y1="320" x2="270" y2="320" stroke="#30363d" stroke-width="1.5"/>
+  <polygon points="270,315 260,320 270,325" fill="#30363d"/>
+
+  <!-- Posterior -->
+  <rect x="100" y="275" width="160" height="90" rx="10" fill="#e6edf3" stroke="#e6edf3" stroke-width="1.5"/>
+  <text x="180" y="310" text-anchor="middle" font-size="10" fill="#484f58" letter-spacing="0.8">STAGE 6</text>
+  <text x="180" y="330" text-anchor="middle" font-size="14" font-weight="600" fill="#0d1117">Posterior</text>
+  <text x="180" y="348" text-anchor="middle" font-size="10" fill="#484f58">p(θ | x) via SNPE</text>
+
+  <!-- ─── Data labels on arrows ─── -->
+  <text x="234" y="148" text-anchor="middle" font-size="9" fill="#484f58">θ</text>
+  <text x="462" y="148" text-anchor="middle" font-size="9" fill="#484f58">source(t)</text>
+  <text x="838" y="238" text-anchor="middle" font-size="9" fill="#484f58">EEG</text>
+  <text x="527" y="313" text-anchor="middle" font-size="9" fill="#484f58">x(t)</text>
+  <text x="299" y="313" text-anchor="middle" font-size="9" fill="#484f58">s(x)</text>
+
+  <!-- ─── Equation strip ─── -->
+  <rect x="40" y="420" width="820" height="60" rx="9" fill="#161b22" stroke="#21262d" stroke-width="1"/>
+  <text x="450" y="444" text-anchor="middle" font-size="10" fill="#484f58" letter-spacing="0.5">OBJECTIVE</text>
+  <text x="450" y="465" text-anchor="middle" font-size="12" fill="#7d8590" font-family="'Courier New', monospace">ℒ(φ) = −𝔼  [ log p_φ(θ | x) ]     where  x = Forward(Simulator(θ)) + ε,   ε ~ 1/f</text>
+
+  <!-- ─── Legend dots ─── -->
+  <circle cx="112" cy="499" r="4" fill="#484f58"/>
+  <text x="122" y="503" font-size="10" fill="#484f58">Simulation</text>
+  <circle cx="210" cy="499" r="4" fill="#7d8590"/>
+  <text x="220" y="503" font-size="10" fill="#484f58">Observation</text>
+  <rect x="308" y="495" width="8" height="8" rx="2" fill="#e6edf3"/>
+  <text x="322" y="503" font-size="10" fill="#484f58">Inference target</text>
+
+</svg>
