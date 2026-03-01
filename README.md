@@ -10,7 +10,7 @@ A general simulation-based inference (SBI) framework for neural mass models, wit
 
 Fitting mechanistic brain models to EEG recordings is a long-standing challenge in computational neuroscience. This project frames it as an amortized Bayesian inference problem: rather than fitting a model to a single observation, a neural density estimator is trained across the full parameter space so that posterior inference at test time is near-instantaneous.
 
-![Pipeline](pipeline_overview.svg)
+![Pipeline](pipeline_overview.svg) 
 
 The pipeline has four stages:
 
