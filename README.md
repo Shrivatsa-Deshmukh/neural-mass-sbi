@@ -22,7 +22,7 @@ The pipeline below shows the full data flow, from prior sampling through to post
 
 The Jansen-Rit model describes the mean membrane potential dynamics of a cortical column through three interacting neural populations — pyramidal cells, excitatory interneurons, and inhibitory interneurons — each modelled as a second-order linear system driven by a sigmoid nonlinearity. It is one of the canonical generative models for EEG oscillations and provides a well-understood testbed for parameter inference methods.
 
-The model is governed by five parameters:
+The model is governed by four parameters:
 
 | Parameter | Symbol | Prior range | Physiological interpretation |
 |-----------|--------|-------------|------------------------------|
