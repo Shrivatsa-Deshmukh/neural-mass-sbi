@@ -1,8 +1,18 @@
 # neural-mass-sbi
 
-A simulation-based inference (SBI) framework for Bayesian parameter estimation of neural mass models from EEG recordings, with the Jansen-Rit model as the reference implementation. Includes a gold-standard, retrain-based feature-ablation pipeline and a comparison against learned feature-gating mechanisms.
+A simulation-based inference (SBI) framework for Bayesian parameter estimation of neural mass models from EEG recordings, with the Jansen-Rit model as the reference implementation.
 
 > **Code will be released upon publication.**
+
+---
+
+## Key finding
+
+Feature gating is often treated as a cheap, free-by-product measure of interpretability — a mechanism trained jointly with a model should, in principle, tell you which inputs it actually relies on. We tested that assumption directly: does a learned feature gate recover the same feature importance as a gold-standard, retrain-based ablation?
+
+**No.** Across 10 independent training seeds, gate-based and ablation-verified importance are **negatively correlated** (Spearman ρ ≈ −0.55 for sigmoid gating, −0.45 for softmax gating), despite the two gate variants agreeing closely with each other (ρ ≈ 0.83) and despite gating costing almost nothing in raw predictive accuracy. The single feature ablation ranks *most* important is consistently the one the gate down-weights *most*.
+
+Full methodology and results are in the accompanying paper.
 
 ---
 
@@ -84,9 +94,7 @@ An optional learned gating mechanism can re-weight the 7 features during trainin
 - **Sigmoid** — each feature's weight is independent; features don't compete.
 - **Softmax** — weights are forced to sum to 1 across the 7 features; features compete directly.
 
-Gating costs little in raw accuracy relative to the ungated baseline (see below), which makes it tempting to treat the learned gate weight as a cheap, free-by-product measure of feature importance. To test whether that's justified, this project also implements a **gold-standard, retrain-based ablation**: for each feature, the full pipeline is retrained from scratch with that feature excluded, and the resulting drop in posterior accuracy is measured directly. Across repeated training seeds, the two measures of importance are compared using per-seed Spearman rank correlation.
-
-The headline result: gate-based and ablation-based importance are **negatively** correlated (not just weakly positive) for both gate activations, despite the two gate variants agreeing closely with each other. The feature ablation identifies as *most* important is consistently the one both gates weight *least*, and vice versa. This holds despite the gate being trained end-to-end on the same objective the modeler cares about. Full methodology and results are in the accompanying paper.
+To test whether the learned gate is a trustworthy importance signal, this project also implements a **gold-standard, retrain-based ablation**: for each feature, the full pipeline is retrained from scratch with that feature excluded, and the resulting drop in posterior accuracy is measured directly. Across repeated training seeds, the two measures of importance are compared using per-seed Spearman rank correlation — see [Key finding](#key-finding) above for the result.
 
 ---
 
