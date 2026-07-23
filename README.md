@@ -1,6 +1,6 @@
 # neural-mass-sbi
 
-A simulation-based inference (SBI) framework for Bayesian parameter estimation of neural mass models from EEG recordings, with the Jansen-Rit model as the reference implementation.
+A simulation-based inference (SBI) framework for Bayesian parameter estimation of neural mass models from EEG recordings, with the Jansen-Rit model as the reference implementation. Includes a gold-standard, retrain-based feature-ablation pipeline and a comparison against learned feature-gating mechanisms.
 
 > **Code will be released upon publication.**
 
@@ -28,8 +28,10 @@ The model is governed by four parameters:
 |-----------|--------|-------------|------------------------------|
 | Connectivity | C | 135 – 270 | Scales the synaptic coupling strengths between all three populations (C₁ = C, C₂ = 0.8C, C₃ = C₄ = 0.25C) |
 | Mean input | μ | 120 – 350 pps | Mean firing rate of afferent input to the pyramidal population |
-| Time constant | κ | 0.75 – 1.25 | Multiplicative scale on the excitatory and inhibitory synaptic rate constants |
+| Time constant | κ | 0.75 – 1.25 | Multiplicative scale on the excitatory and inhibitory synaptic rate constants, holding their 2:1 ratio fixed |
 | Inhibitory gain | g | 0.5 – 2.0 | Scales the inhibitory synaptic amplitude; primary determinant of band power |
+
+Excitatory gain is held fixed rather than inferred, so that a decrease in excitatory gain and an increase in inhibitory gain — which shape the signal in near-mirror-image fashion — cannot be confused for one another during inference.
 
 All parameters are inferred in log-space. The model is integrated at 1 kHz (Euler method, Δt = 1 ms). The observed signal is the post-synaptic potential difference y₁ − y₂, which corresponds to the EEG-proximal output of the pyramidal population. A 2 s transient is discarded before retaining 3 s of output, which is then downsampled to 250 Hz using a zero-phase anti-aliasing filter.
 
@@ -37,13 +39,13 @@ All parameters are inferred in log-space. The model is integrated at 1 kHz (Eule
 
 ## EEG Forward Model
 
-To move from cortical source activity to scalp EEG, a lead field is computed using MNE-Python's fsaverage template head model. The source is placed at primary visual cortex (MNI coordinates [0, −85, 5] mm) — and the forward solution uses the pre-computed fsaverage three-layer boundary element model (BEM, 5120 triangles per surface) with an ico4 cortical source space and fixed surface-normal dipole orientation. Electrode positions follow the standard 10–20 montage.
+To move from cortical source activity to scalp EEG, a lead field is computed using MNE-Python's fsaverage template head model. The source is placed at primary visual cortex (MNI coordinates [0, −85, 5] mm), and the forward solution uses the pre-computed fsaverage three-layer boundary element model (BEM, 5120 triangles per surface) with an ico4 cortical source space and fixed surface-normal dipole orientation. Electrode positions follow the standard 10–20 montage.
 
-Of all electrodes, the one with the highest absolute sensitivity to the source is selected automatically, reducing the multi-channel forward problem to a single scalar projection:
+Rather than collapsing to a single electrode, the **5 electrodes with the highest absolute sensitivity to the source are auto-selected**, and the source signal is projected to each using its **signed** lead-field gain:
 
-&nbsp;&nbsp;&nbsp;&nbsp;EEG(t) = |L| · source(t)
+&nbsp;&nbsp;&nbsp;&nbsp;EEG_c(t) = L_c · source(t)&nbsp;&nbsp;&nbsp;&nbsp;for each selected electrode c
 
-where |L| is the absolute value of the lead field gain for the selected electrode. The absolute value is used to ensure consistent polarity convention across sources regardless of dipole orientation sign. The forward solution is computed once and cached locally.
+Using the signed gain (rather than its absolute value) preserves the real scalp topography, including sign inversion across electrode pairs, instead of collapsing every channel to the same polarity. The number of channels and the electrode-selection behaviour are both configurable — a single-electrode, absolute-gain mode is also available for simpler setups — but multi-channel signed projection is the default. The forward solution is computed once per source location and cached locally.
 
 ---
 
@@ -59,7 +61,7 @@ Noise is generated in the frequency domain: white noise is transformed via rfft,
 
 ## Summary Statistics
 
-Each 3 s epoch (750 samples at 250 Hz) is compressed into seven interpretable summary statistics before being passed to the density estimator. 
+Each 3 s epoch (750 samples at 250 Hz), per electrode, is compressed into seven interpretable summary statistics before being passed to the density estimator:
 
 | Feature | Definition |
 |---------|-----------|
@@ -71,7 +73,20 @@ Each 3 s epoch (750 samples at 250 Hz) is compressed into seven interpretable su
 | Hjorth mobility | √(Var(x′) / Var(x)): proxy for mean signal frequency |
 | Hjorth complexity | Mobility(x′) / Mobility(x): proxy for spectral bandwidth |
 
-All features are z-scored using mean and standard deviation computed from the training set before being passed to the density estimator. An optional learned sigmoid gating mechanism can re-weight features during training to quantify which carry the most information about each parameter.
+All features are z-scored using mean and standard deviation computed from the training set before being passed to the density estimator.
+
+---
+
+## Feature Gating & Interpretability
+
+An optional learned gating mechanism can re-weight the 7 features during training, pooled across electrodes so that gating operates at the same granularity as the ablation procedure below. Two gate activations are supported:
+
+- **Sigmoid** — each feature's weight is independent; features don't compete.
+- **Softmax** — weights are forced to sum to 1 across the 7 features; features compete directly.
+
+Gating costs little in raw accuracy relative to the ungated baseline (see below), which makes it tempting to treat the learned gate weight as a cheap, free-by-product measure of feature importance. To test whether that's justified, this project also implements a **gold-standard, retrain-based ablation**: for each feature, the full pipeline is retrained from scratch with that feature excluded, and the resulting drop in posterior accuracy is measured directly. Across repeated training seeds, the two measures of importance are compared using per-seed Spearman rank correlation.
+
+The headline result: gate-based and ablation-based importance are **negatively** correlated (not just weakly positive) for both gate activations, despite the two gate variants agreeing closely with each other. The feature ablation identifies as *most* important is consistently the one both gates weight *least*, and vice versa. This holds despite the gate being trained end-to-end on the same objective the modeler cares about. Full methodology and results are in the accompanying paper.
 
 ---
 
@@ -84,33 +99,42 @@ The posterior p(θ | x) is learned using Sequential Neural Posterior Estimation 
 | Architecture | Neural Spline Flow |
 | Coupling transforms | 5 |
 | Hidden units | 125 |
-| Training simulations | 131,072 ($$2^{17}$$)|
+| Training simulations | 32,768 (2¹⁵) |
 | Prior sampling | Sobol quasi-random sequence |
 | Optimiser | Adam, lr = 5 × 10⁻⁴ |
 | Batch size | 512 |
 | Stopping criterion | 15 epochs without validation improvement (max 250) |
 | Validation fraction | 15% |
 
-Parameters are drawn from a Sobol quasi-random sequence rather than uniform random sampling, providing more uniform prior coverage for the same number of simulations — particularly important in the corners of the parameter space.
+Parameters are drawn from a Sobol quasi-random sequence rather than uniform random sampling, providing more uniform prior coverage for the same number of simulations — particularly important in the corners of the parameter space. The 32,768-simulation default was chosen from a compute-efficiency sweep across four budgets (8,192 / 16,384 / 32,768 / 65,536): accuracy keeps improving beyond this point, but training time grows faster than the remaining accuracy gain.
 
 ---
 
 ## Results
 
-The trained posterior is evaluated on 150 held-out test observations. For each, 1,000 posterior samples are drawn and the posterior mean is taken as the point estimate. Metrics reported are: coefficient of determination (R²), Pearson correlation (r), normalised RMSE (NRMSE, normalised by prior range), and empirical coverage of 50%, 90%, and 95% credible intervals.
+The trained posterior is evaluated on 250 held-out test observations per training seed, averaged across 10 independently trained seeds. For each test point, 1,000 posterior samples are drawn and the posterior mean is taken as the point estimate. Metrics reported are: coefficient of determination (R²), Pearson correlation (r), normalised RMSE (NRMSE, normalised by prior range), and empirical coverage of 50%, 90%, and 95% credible intervals.
+
+**Per-parameter recovery (ungated baseline):**
 
 | Parameter | R² | Pearson r | NRMSE | Cov50 | Cov90 | Cov95 |
 |-----------|------|-----------|-------|-------|-------|-------|
-| C — connectivity | 0.793 | 0.891 | 0.127 | 0.51 | 0.93 | 0.96 |
-| μ — mean input | 0.744 | 0.868 | 0.150 | 0.47 | 0.91 | 0.96 |
-| κ — time constant | 0.711 | 0.844 | 0.158 | 0.48 | 0.85 | 0.91 |
-| g — inhibitory gain | 0.925 | 0.962 | 0.081 | 0.55 | 0.91 | 0.94 |
-| **Mean** | **0.793** | **0.891** | **0.129** | **0.50** | **0.90** | **0.94** |
+| C — connectivity | 0.780 | 0.884 | 0.135 | 0.457 | 0.883 | 0.940 |
+| μ — mean input | 0.751 | 0.867 | 0.152 | 0.461 | 0.882 | 0.935 |
+| κ — time constant | 0.720 | 0.850 | 0.157 | 0.432 | 0.826 | 0.904 |
+| g — inhibitory gain | 0.921 | 0.962 | 0.086 | 0.499 | 0.891 | 0.950 |
+| **Mean** | **0.793** | **0.891** | **0.132** | **0.462** | **0.871** | **0.932** |
 
-The inhibitory gain g is the best-recovered parameter (R² = 0.93), reflecting its strong and distinct influence on oscillation amplitude through the inhibitory synaptic gain. The time constant κ is the most challenging (R² = 0.71), which we attribute to a partial redundancy between κ and μ in shaping the spectral peak frequency — both parameters influence the dominant oscillation frequency through different mechanisms, making their individual contributions difficult to disambiguate. Credible interval coverage is near-nominal across all parameters at the 90% level (0.85–0.93), indicating a well-calibrated posterior.
+The inhibitory gain g is the best-recovered parameter, reflecting its strong, distinct influence on oscillation amplitude. The time constant κ is the most challenging (R² = 0.72) and is also the one parameter with a detectable calibration gap — its coverage is below nominal at all three credible levels, indicating a mildly overconfident posterior for this parameter specifically.
+
+**Cost of gating (mean R² across 10 seeds):**
+
+| Configuration | R² | NRMSE | Pearson r |
+|---|---|---|---|
+| No gating (default) | 0.793 (± 0.010) | 0.132 (± 0.003) | 0.891 (± 0.006) |
+| Sigmoid gating | 0.788 (± 0.019) | 0.134 (± 0.007) | 0.887 (± 0.011) |
+| Softmax gating | 0.778 (± 0.017) | 0.138 (± 0.006) | 0.882 (± 0.009) |
 
 ---
-
 
 ## Acknowledgements
 
