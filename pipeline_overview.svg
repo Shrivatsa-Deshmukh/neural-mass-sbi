@@ -1,0 +1,106 @@
+<svg viewBox="0 0 900 500" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI', system-ui, sans-serif">
+
+  <!-- Background -->
+  <rect width="900" height="500" fill="#0d1117"/>
+
+  <!-- Title -->
+  <text x="450" y="42" text-anchor="middle" font-size="17" font-weight="600" fill="#e6edf3" letter-spacing="0.3">Simulation-Based Inference Pipeline</text>
+  <text x="450" y="62" text-anchor="middle" font-size="10.5" fill="#555e6a" letter-spacing="1.2">NEURAL MASS MODEL · EEG PARAMETER ESTIMATION</text>
+
+  <!-- ===================== ROW 1 ===================== -->
+
+  <!-- Box 1: Prior Sampling -->
+  <rect x="40" y="100" width="155" height="82" rx="9" fill="#161b22" stroke="#444c56" stroke-width="1.5"/>
+  <text x="117" y="130" text-anchor="middle" font-size="9.5" fill="#555e6a" letter-spacing="0.9">STAGE 1</text>
+  <text x="117" y="152" text-anchor="middle" font-size="13.5" font-weight="600" fill="#e6edf3">Prior Sampling</text>
+  <text x="117" y="170" text-anchor="middle" font-size="10" fill="#8b949e">Sobol sequences</text>
+
+  <!-- Arrow 1→2 -->
+  <line x1="195" y1="141" x2="240" y2="141" stroke="#444c56" stroke-width="1.5"/>
+  <polygon points="240,136 251,141 240,146" fill="#444c56"/>
+  <rect x="200" y="120" width="36" height="16" rx="4" fill="#1c2128"/>
+  <text x="218" y="131.5" text-anchor="middle" font-size="9.5" fill="#8b949e">θ</text>
+
+  <!-- Box 2: Simulator -->
+  <rect x="251" y="100" width="155" height="82" rx="9" fill="#161b22" stroke="#444c56" stroke-width="1.5"/>
+  <text x="328" y="130" text-anchor="middle" font-size="9.5" fill="#555e6a" letter-spacing="0.9">STAGE 2</text>
+  <text x="328" y="152" text-anchor="middle" font-size="13.5" font-weight="600" fill="#e6edf3">Simulator</text>
+  <text x="328" y="170" text-anchor="middle" font-size="10" fill="#8b949e">Neural mass model</text>
+
+  <!-- Arrow 2→3 -->
+  <line x1="406" y1="141" x2="451" y2="141" stroke="#444c56" stroke-width="1.5"/>
+  <polygon points="451,136 462,141 451,146" fill="#444c56"/>
+  <rect x="406" y="120" width="52" height="16" rx="4" fill="#1c2128"/>
+  <text x="432" y="131.5" text-anchor="middle" font-size="9.5" fill="#8b949e">source(t)</text>
+
+  <!-- Box 3: Forward Model -->
+  <rect x="462" y="100" width="155" height="82" rx="9" fill="#161b22" stroke="#444c56" stroke-width="1.5"/>
+  <text x="539" y="130" text-anchor="middle" font-size="9.5" fill="#555e6a" letter-spacing="0.9">STAGE 3</text>
+  <text x="539" y="152" text-anchor="middle" font-size="13.5" font-weight="600" fill="#e6edf3">Forward Model</text>
+  <text x="539" y="170" text-anchor="middle" font-size="10" fill="#8b949e">Source → sensor space</text>
+
+  <!-- Arrow 3 → bend right then down -->
+  <line x1="617" y1="141" x2="820" y2="141" stroke="#444c56" stroke-width="1.5"/>
+  <line x1="820" y1="141" x2="820" y2="300" stroke="#444c56" stroke-width="1.5"/>
+  <line x1="820" y1="300" x2="730" y2="300" stroke="#444c56" stroke-width="1.5"/>
+  <polygon points="730,295 719,300 730,305" fill="#444c56"/>
+  <rect x="824" y="208" width="44" height="16" rx="4" fill="#1c2128"/>
+  <text x="846" y="219.5" text-anchor="middle" font-size="9.5" fill="#8b949e">EEG(t)</text>
+
+  <!-- ===================== ROW 2 (right to left) ===================== -->
+
+  <!-- Box 4: Noise Model -->
+  <rect x="569" y="259" width="155" height="82" rx="9" fill="#161b22" stroke="#444c56" stroke-width="1.5"/>
+  <text x="646" y="289" text-anchor="middle" font-size="9.5" fill="#555e6a" letter-spacing="0.9">STAGE 4</text>
+  <text x="646" y="311" text-anchor="middle" font-size="13.5" font-weight="600" fill="#e6edf3">Noise Model</text>
+  <text x="646" y="329" text-anchor="middle" font-size="10" fill="#8b949e">Observation corruption</text>
+
+  <!-- Arrow 4→5 -->
+  <line x1="569" y1="300" x2="524" y2="300" stroke="#444c56" stroke-width="1.5"/>
+  <polygon points="524,295 513,300 524,305" fill="#444c56"/>
+  <rect x="524" y="280" width="42" height="16" rx="4" fill="#1c2128"/>
+  <text x="545" y="291.5" text-anchor="middle" font-size="9.5" fill="#8b949e">x(t)</text>
+
+  <!-- Box 5: Embedding -->
+  <rect x="358" y="259" width="155" height="82" rx="9" fill="#161b22" stroke="#444c56" stroke-width="1.5"/>
+  <text x="435" y="289" text-anchor="middle" font-size="9.5" fill="#555e6a" letter-spacing="0.9">STAGE 5</text>
+  <text x="435" y="311" text-anchor="middle" font-size="13.5" font-weight="600" fill="#e6edf3">Embedding</text>
+  <text x="435" y="329" text-anchor="middle" font-size="10" fill="#8b949e">Summary stats + gating</text>
+  <rect x="380" y="243" width="110" height="15" rx="7.5" fill="#1c2128" stroke="#444c56" stroke-width="1"/>
+  <text x="435" y="253.5" text-anchor="middle" font-size="8" fill="#8b949e" letter-spacing="0.2">sigmoid &amp; softmax</text>
+
+  <!-- Arrow 5→6 -->
+  <line x1="358" y1="300" x2="313" y2="300" stroke="#444c56" stroke-width="1.5"/>
+  <polygon points="313,295 302,300 313,305" fill="#444c56"/>
+  <rect x="308" y="280" width="46" height="16" rx="4" fill="#1c2128"/>
+  <text x="331" y="291.5" text-anchor="middle" font-size="9.5" fill="#8b949e">s(x)</text>
+
+  <!-- Box 6: Posterior — highlighted white -->
+  <rect x="147" y="259" width="155" height="82" rx="9" fill="#e6edf3" stroke="#e6edf3" stroke-width="1.5"/>
+  <text x="224" y="289" text-anchor="middle" font-size="9.5" fill="#555e6a" letter-spacing="0.9">STAGE 6</text>
+  <text x="224" y="311" text-anchor="middle" font-size="13.5" font-weight="600" fill="#0d1117">Posterior</text>
+  <text x="224" y="329" text-anchor="middle" font-size="10" fill="#555e6a">p(θ | x)  via SNPE</text>
+
+  <!-- ===================== BOTTOM STRIP — 3 columns ===================== -->
+  <rect x="40" y="390" width="820" height="72" rx="9" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+
+  <!-- Dividers -->
+  <line x1="313" y1="405" x2="313" y2="447" stroke="#30363d" stroke-width="1"/>
+  <line x1="587" y1="405" x2="587" y2="447" stroke="#30363d" stroke-width="1"/>
+
+  <!-- Column 1: What is SBI -->
+  <text x="177" y="418" text-anchor="middle" font-size="9" fill="#555e6a" letter-spacing="0.8">WHAT IS SBI?</text>
+  <text x="177" y="437" text-anchor="middle" font-size="10.5" fill="#8b949e">Train once, infer instantly</text>
+  <text x="177" y="452" text-anchor="middle" font-size="10.5" fill="#8b949e">for any new observation</text>
+
+  <!-- Column 2: How it works -->
+  <text x="450" y="418" text-anchor="middle" font-size="9" fill="#555e6a" letter-spacing="0.8">HOW IT WORKS</text>
+  <text x="450" y="437" text-anchor="middle" font-size="10.5" fill="#8b949e">A neural density estimator learns</text>
+  <text x="450" y="452" text-anchor="middle" font-size="10.5" fill="#8b949e">p(θ | x) from simulated data</text>
+
+  <!-- Column 3: No likelihood -->
+  <text x="723" y="418" text-anchor="middle" font-size="9" fill="#555e6a" letter-spacing="0.8">NO LIKELIHOOD NEEDED</text>
+  <text x="723" y="437" text-anchor="middle" font-size="10.5" fill="#8b949e">Works for any simulator —</text>
+  <text x="723" y="452" text-anchor="middle" font-size="10.5" fill="#8b949e">black-box or white-box</text>
+
+</svg>
