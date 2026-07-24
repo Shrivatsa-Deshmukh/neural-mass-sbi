@@ -22,6 +22,7 @@ Rather than optimising a likelihood for each new observation, a neural density e
 
 The pipeline below shows the full data flow, from prior sampling through to posterior estimation. Each stage is modular: the forward model, noise model, and density estimator are independent of the choice of neural mass model, so the framework can be applied to any model that produces a time-series output.
 
+![Pipeline](overview.svg)
 
 ---
 
