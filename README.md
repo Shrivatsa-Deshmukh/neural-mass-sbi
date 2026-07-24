@@ -6,11 +6,11 @@ A simulation-based inference (SBI) framework for Bayesian parameter estimation o
 
 ---
 
-## Key finding
+## Key Finding
 
-Feature gating is often treated as a cheap, free-by-product measure of interpretability; a mechanism trained jointly with a model should, in principle, tell you which inputs it actually relies on. We tested that assumption directly: does a learned feature gate recover the same feature importance as a gold-standard, retrain-based ablation?
+Feature gating is often treated as a low-cost source of interpretability: a mechanism trained jointly with a predictive model is assumed to reveal, as a byproduct, which inputs the model actually relies on. We test this assumption directly by comparing gate-based feature importance against a gold-standard, retrain-based ablation in a Jansen-Rit simulation-based inference pipeline.
 
-**No.** Across 10 independent training seeds, gate-based and ablation-verified importance are **negatively correlated** (Spearman ρ ≈ −0.55 for sigmoid gating, −0.45 for softmax gating), despite the two gate variants agreeing closely with each other (ρ ≈ 0.83) and despite gating costing almost nothing in raw predictive accuracy. The single feature ablation ranks *most* important is consistently the one the gate down-weights *most*.
+Across ten independent training seeds, the two measures of importance are negatively correlated, despite the gate being trained end-to-end on the same objective the modeler cares about and costing negligible predictive accuracy. The feature ablation identifies as most important is consistently the one both gate variants down-weight most, and the feature ablation identifies as least important is the one both gate variants favor most. Full numbers are reported in [Results : Gating vs. Ablation](#gating-vs-ablation); full methodology is described in the accompanying paper.
 
 ---
 
@@ -18,7 +18,7 @@ Feature gating is often treated as a cheap, free-by-product measure of interpret
 
 Mechanistic neural mass models offer interpretable, physiologically grounded accounts of EEG dynamics, but fitting them to empirical data is non-trivial: the likelihood is intractable, forward simulations are expensive, and classical optimisation methods scale poorly to multi-parameter spaces. This project addresses all three by framing parameter estimation as amortised Bayesian inference.
 
-Rather than optimising a likelihood for each new observation, a neural density estimator is trained once across the full parameter space using simulated data. At test time, the full posterior distribution over all model parameters is obtained instantaneously for any new EEG recording; without re-running the simulator.
+Rather than optimising a likelihood for each new observation, a neural density estimator is trained once across the full parameter space using simulated data. At test time, the full posterior distribution over all model parameters is obtained instantaneously for any new EEG recording, without re-running the simulator.
 
 The pipeline below shows the full data flow, from prior sampling through to posterior estimation. Each stage is modular: the forward model, noise model, and density estimator are independent of the choice of neural mass model, so the framework can be applied to any model that produces a time-series output.
 
@@ -26,122 +26,115 @@ The pipeline below shows the full data flow, from prior sampling through to post
 
 ---
 
-## The Jansen-Rit Model
+## Method
 
-The Jansen-Rit model describes the mean membrane potential dynamics of a cortical column through three interacting neural populations; pyramidal cells, excitatory interneurons, and inhibitory interneurons - each modelled as a second-order linear system driven by a sigmoid nonlinearity. It is one of the canonical generative models for EEG oscillations and provides a well-understood testbed for parameter inference methods.
+### The Jansen-Rit Model
 
-The model is governed by four parameters:
+The Jansen-Rit model describes the mean membrane potential dynamics of a cortical column through three interacting neural populations, pyramidal cells, excitatory interneurons, and inhibitory interneurons, each modelled as a second-order linear system driven by a sigmoid nonlinearity. Four parameters are inferred, all in log-space:
 
 | Parameter | Symbol | Prior range | Physiological interpretation |
 |-----------|--------|-------------|------------------------------|
-| Connectivity | C | 135 – 270 | Scales the synaptic coupling strengths between all three populations (C₁ = C, C₂ = 0.8C, C₃ = C₄ = 0.25C) |
+| Connectivity | C | 135 – 270 | Synaptic coupling strength between populations |
 | Mean input | μ | 120 – 350 pps | Mean firing rate of afferent input to the pyramidal population |
-| Time constant | κ | 0.75 – 1.25 | Multiplicative scale on the excitatory and inhibitory synaptic rate constants, holding their 2:1 ratio fixed |
-| Inhibitory gain | g | 0.5 – 2.0 | Scales the inhibitory synaptic amplitude; primary determinant of band power |
+| Time constant | κ | 0.75 – 1.25 | Scale on the excitatory/inhibitory synaptic rate constants |
+| Inhibitory gain | g | 0.5 – 2.0 | Scales inhibitory synaptic amplitude; primary determinant of band power |
 
-Excitatory gain is held fixed rather than inferred, so that a decrease in excitatory gain and an increase in inhibitory gain; which shape the signal in near-mirror-image fashion cannot be confused for one another during inference.
+Excitatory gain is held fixed rather than inferred, since it trades off against inhibitory gain in a near-mirror-image way that would otherwise be hard to identify. Each simulated trial discards an initial transient and is downsampled to 250 Hz before feature extraction.
 
-All parameters are inferred in log-space. The model is integrated at 1 kHz (Euler method, Δt = 1 ms). The observed signal is the post-synaptic potential difference y₁ − y₂, which corresponds to the EEG-proximal output of the pyramidal population. A 2 s transient is discarded before retaining 3 s of output, which is then downsampled to 250 Hz using a zero-phase anti-aliasing filter.
+### EEG Forward Model
 
----
+Cortical source activity is projected to scalp EEG using a lead field computed from MNE-Python's fsaverage template head model, with the source placed in visual cortex. Rather than collapsing to a single channel, the 5 electrodes with the highest sensitivity to the source are auto-selected, and the signal is projected to each using its **signed** lead-field gain, preserving realistic scalp topography (including sign inversion across electrode pairs) instead of forcing every channel to the same polarity.
 
-## EEG Forward Model
+### Observation Noise
 
-To move from cortical source activity to scalp EEG, a lead field is computed using MNE-Python's fsaverage template head model. The source is placed at primary visual cortex, and the forward solution uses the pre-computed fsaverage three-layer boundary element model with an ico4 cortical source space and fixed surface-normal dipole orientation. Electrode positions follow the standard 10–20 montage.
+Each simulated epoch is corrupted with pink (1/f) noise at a signal-to-noise ratio drawn independently per trial from Uniform(5, 25) dB. Varying the SNR per trial, rather than fixing it, trains the posterior to marginalise over noise conditions, so the resulting estimator is robust to unknown noise levels at test time.
 
-Rather than collapsing to a single electrode, the 5 electrodes with the highest absolute sensitivity to the source are auto-selected, and the source signal is projected to each using its signed lead-field gain:
+### Summary Statistics
 
-&nbsp;&nbsp;&nbsp;&nbsp;EEG_c(t) = L_c · source(t)&nbsp;&nbsp;&nbsp;&nbsp;for each selected electrode c
-
-Using the signed gain (rather than its absolute value) preserves the real scalp topography, including sign inversion across electrode pairs, instead of collapsing every channel to the same polarity. The number of channels and the electrode-selection behaviour are both configurable; a single-electrode, absolute-gain mode is also available for simpler setups but multi-channel signed projection is the default. The forward solution is computed once per source location and cached locally.
-
----
-
-## Observation Noise
-
-Real EEG recordings contain structured background activity characterised by a 1/f power spectrum. Each simulated EEG epoch is therefore corrupted by pink noise (spectral exponent α = 1) scaled to a randomly drawn signal-to-noise ratio:
-
-&nbsp;&nbsp;&nbsp;&nbsp;x(t) = EEG(t) + ε(t),&nbsp;&nbsp;&nbsp;&nbsp;ε ~ 1/f,&nbsp;&nbsp;&nbsp;&nbsp;SNR ~ Uniform(5, 25) dB
-
-Noise is generated in the frequency domain: white noise is transformed via rfft, shaped by a 1/f amplitude filter, then transformed back via irfft and normalised to unit variance before scaling to the target SNR. Drawing a different SNR per simulation rather than using a fixed value trains the posterior to marginalise over noise conditions, producing an estimator that is robust to unknown noise levels at test time.
-
----
-
-## Summary Statistics
-
-Each 3 s epoch (750 samples at 250 Hz), per electrode, is compressed into seven interpretable summary statistics before being passed to the density estimator:
+Each epoch, per electrode, is compressed into seven interpretable summary statistics before reaching the density estimator, then z-scored using training-set statistics:
 
 | Feature | Definition |
 |---------|-----------|
-| Skewness | Third standardised moment: asymmetry of the amplitude distribution |
-| Kurtosis | Excess kurtosis (fourth moment − 3): tail heaviness relative to Gaussian |
-| Spectral slope | OLS regression slope of log PSD on log frequency, 1–100 Hz |
-| Total log power | Log of summed Welch PSD across all frequency bins (DC to Nyquist) |
-| Dominant frequency | Frequency of peak Welch PSD in 1–100 Hz band, normalised by Nyquist (125 Hz) |
-| Hjorth mobility | √(Var(x′) / Var(x)): proxy for mean signal frequency |
-| Hjorth complexity | Mobility(x′) / Mobility(x): proxy for spectral bandwidth |
+| Skewness | Asymmetry of the amplitude distribution |
+| Kurtosis | Tail heaviness relative to Gaussian |
+| Spectral slope | Slope of log power vs. log frequency, 1–100 Hz |
+| Total log power | Log of summed power across all frequency bins |
+| Dominant frequency | Frequency of peak power, 1–100 Hz, normalised by Nyquist |
+| Hjorth mobility | Proxy for mean signal frequency |
+| Hjorth complexity | Proxy for spectral bandwidth |
 
-All features are z-scored using mean and standard deviation computed from the training set before being passed to the density estimator.
+### Feature Gating
 
----
+An optional learned gating mechanism can re-weight the 7 features during training, pooled across electrodes so gating operates at the same granularity as the ablation procedure below. Two gate activations are supported:
 
-## Feature Gating & Interpretability
+- **Sigmoid**: each feature's weight is independent; features don't compete.
+- **Softmax**: weights are forced to sum to 1 across the 7 features; features compete directly.
 
-An optional learned gating mechanism can re-weight the 7 features during training, pooled across electrodes so that gating operates at the same granularity as the ablation procedure below. Two gate activations are supported:
+To test whether the learned gate is a trustworthy importance signal, this project also implements a gold-standard, **retrain-based ablation**: for each feature, the full pipeline is retrained from scratch with that feature excluded, and the resulting drop in posterior accuracy is measured directly. The two measures of importance are compared using per-seed Spearman rank correlation; see [Results : Gating vs. Ablation](#gating-vs-ablation).
 
-- **Sigmoid** - each feature's weight is independent; features don't compete.
-- **Softmax** - weights are forced to sum to 1 across the 7 features; features compete directly.
+### Density Estimator
 
-To test whether the learned gate is a trustworthy importance signal, this project also implements a gold-standard, **retrain-based ablation**: for each feature, the full pipeline is retrained from scratch with that feature excluded, and the resulting drop in posterior accuracy is measured directly. Across repeated training seeds, the two measures of importance are compared using per-seed Spearman rank correlation - see [Key finding](#key-finding) above for the result.
-
----
-
-## Density Estimator
-
-The posterior p(θ | x) is learned using Sequential Neural Posterior Estimation (SNPE-C), implemented via the [sbi](https://github.com/sbi-dev/sbi) library. The density estimator is a Neural Spline Flow (NSF) conditioned on the summary statistics:
-
-| Component | Setting |
-|-----------|---------|
-| Architecture | Neural Spline Flow |
-| Coupling transforms | 5 |
-| Hidden units | 125 |
-| Training simulations | 32,768 (2¹⁵) |
-| Prior sampling | Sobol quasi-random sequence |
-| Optimiser | Adam, lr = 5 × 10⁻⁴ |
-| Batch size | 512 |
-| Stopping criterion | 15 epochs without validation improvement (max 250) |
-| Validation fraction | 15% |
-
-Parameters are drawn from a Sobol quasi-random sequence rather than uniform random sampling, providing more uniform prior coverage for the same number of simulations; particularly important in the corners of the parameter space. The 32,768-simulation default was chosen from a compute-efficiency sweep across four budgets (8,192 / 16,384 / 32,768 / 65,536): accuracy keeps improving beyond this point, but training time grows faster than the accuracy gain.
+The posterior p(θ | x) is learned with Sequential Neural Posterior Estimation (SNPE-C) via the [sbi](https://github.com/sbi-dev/sbi) library, using a Neural Spline Flow (5 transforms, 125 hidden units) trained on 32,768 simulations drawn from a Sobol quasi-random sequence for more uniform prior coverage than independent sampling. This simulation budget was chosen from a compute-efficiency sweep across four budgets (8,192 / 16,384 / 32,768 / 65,536): accuracy keeps improving beyond this point, but training time grows faster than the accuracy gain.
 
 ---
 
 ## Results
 
-The trained posterior is evaluated on 250 held-out test observations per training seed, averaged across 10 independently trained seeds. For each test point, 1,000 posterior samples are drawn and the posterior mean is taken as the point estimate. Metrics reported are: coefficient of determination (R²), Pearson correlation (r), normalised RMSE (NRMSE, normalised by prior range), and empirical coverage of 50%, 90%, and 95% credible intervals.
+All metrics below are computed on 250 held-out test observations per training seed, averaged across 10 independently trained seeds.
 
-**Per-parameter recovery (ungated baseline):**
+### Pipeline Validation
 
-| Parameter | R² | Pearson r | NRMSE | Cov50 | Cov90 | Cov95 |
-|-----------|------|-----------|-------|-------|-------|-------|
-| C — connectivity | 0.780 | 0.884 | 0.135 | 0.457 | 0.883 | 0.940 |
-| μ — mean input | 0.751 | 0.867 | 0.152 | 0.461 | 0.882 | 0.935 |
-| κ — time constant | 0.720 | 0.850 | 0.157 | 0.432 | 0.826 | 0.904 |
-| g — inhibitory gain | 0.921 | 0.962 | 0.086 | 0.499 | 0.891 | 0.950 |
-| **Mean** | **0.793** | **0.891** | **0.132** | **0.462** | **0.871** | **0.932** |
+Does the underlying SBI pipeline recover parameters accurately and with well-calibrated uncertainty, independent of the gating question?
 
+| Parameter | R² | NRMSE | 90% coverage |
+|-----------|------|-------|---------------|
+| C (connectivity) | 0.780 | 0.135 | 0.883 |
+| μ (mean input) | 0.751 | 0.152 | 0.882 |
+| κ (time constant) | 0.720 | 0.157 | 0.826 |
+| g (inhibitory gain) | 0.921 | 0.086 | 0.891 |
+| **Mean** | **0.793** | **0.132** | **0.871** |
 
-**Gating (mean R² across 10 seeds):**
+g is the best-recovered parameter; κ is the most challenging and also the only parameter with below-nominal credible-interval coverage, indicating a mild calibration gap.
 
-| Configuration | R² | NRMSE | Pearson r |
-|---|---|---|---|
-| No gating (default) | 0.793 (± 0.010) | 0.132 (± 0.003) | 0.891 (± 0.006) |
-| Sigmoid gating | 0.788 (± 0.019) | 0.134 (± 0.007) | 0.887 (± 0.011) |
-| Softmax gating | 0.778 (± 0.017) | 0.138 (± 0.006) | 0.882 (± 0.009) |
+**Cost of gating** — does adding a gate hurt the pipeline's own accuracy?
+
+| Configuration | R² | NRMSE |
+|---|---|---|
+| No gating (default) | 0.793 (± 0.010) | 0.132 (± 0.003) |
+| Sigmoid gating | 0.788 (± 0.019) | 0.134 (± 0.007) |
+| Softmax gating | 0.778 (± 0.017) | 0.138 (± 0.006) |
+
+No: the cost is within noise. This matters for the Key Finding, since the gate isn't disagreeing with ablation because it's a poorly-trained or degenerate model.
+
+### Gating vs. Ablation
+
+This is the evidence behind the [Key Finding](#key-finding) above. For each feature: the drop in mean R² when that feature is excluded and the pipeline retrained from scratch (gold-standard ablation), versus the mean weight each gate assigns that feature. Rank 1 = most important by that method.
+
+| Feature | Ablation ΔR² | Rank | Sigmoid weight | Rank | Softmax weight | Rank |
+|---|---|---|---|---|---|---|
+| Total log-power | 0.209 | **1** | 0.327 | 7 | 0.085 | 6 |
+| Skewness | 0.026 | 2 | 0.432 | 5 | 0.112 | 5 |
+| Hjorth complexity | 0.025 | 3 | 0.505 | 3 | 0.129 | 3 |
+| Kurtosis | 0.022 | 4 | 0.331 | 6 | 0.076 | **7** |
+| Hjorth mobility | 0.012 | 5 | 0.617 | **1** | 0.143 | 2 |
+| Spectral slope | 0.005 | 6 | 0.457 | 4 | 0.112 | 4 |
+| Dominant frequency | −0.008 | **7** | 0.608 | 2 | 0.168 | **1** |
+
+The feature ablation ranks most important (total log-power) gets the lowest or second-lowest gate weight under both activations. The feature ablation ranks least important (dominant frequency) gets the highest or second-highest gate weight under both.
+
+**Rank correlation**, computed per seed and averaged across 10 seeds:
+
+| Comparison | Spearman ρ | p |
+|---|---|---|
+| Ablation vs. sigmoid gate | −0.546 | 0.0022 |
+| Ablation vs. softmax gate | −0.446 | 0.0041 |
+| Sigmoid gate vs. softmax gate | 0.829 | 0.0022 |
+
+The two gate variants agree closely with each other; the gate is internally consistent and reproducible across activation functions. It simply tracks something other than what ablation tracks.
 
 ---
 
 ## Acknowledgements
 
-- [MNE-Python](https://mne.tools) — EEG forward modelling and fsaverage template
-- [sbi](https://github.com/sbi-dev/sbi) — SNPE implementation
+- [MNE-Python](https://mne.tools): EEG forward modelling and fsaverage template
+- [sbi](https://github.com/sbi-dev/sbi): SNPE implementation
