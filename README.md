@@ -1,7 +1,5 @@
 # neural-mass-sbi
 
-A simulation-based inference (SBI) framework for Bayesian parameter estimation of neural mass models from EEG recordings, with the Jansen-Rit model as the reference implementation.
-
 > **Code will be released upon publication.**
 
 ---
@@ -10,7 +8,7 @@ A simulation-based inference (SBI) framework for Bayesian parameter estimation o
 
 Feature gating is often treated as a low-cost source of interpretability: a mechanism trained jointly with a predictive model is assumed to reveal, as a byproduct, which inputs the model actually relies on. We test this assumption directly by comparing gate-based feature importance against a gold-standard, retrain-based ablation in a Jansen-Rit simulation-based inference pipeline.
 
-Across ten independent training seeds, the two measures of importance are negatively correlated, despite the gate being trained end-to-end on the same objective the modeler cares about and costing negligible predictive accuracy. The feature ablation identifies as most important is consistently the one both gate variants down-weight most, and the feature ablation identifies as least important is the one both gate variants favor most. Full numbers are reported in [Results : Gating vs. Ablation](#gating-vs-ablation); full methodology is described in the accompanying paper.
+Across ten independent training seeds, the two measures of importance are negatively correlated, despite the gate being trained end-to-end on the same objective the modeler cares about and costing negligible predictive accuracy. The feature ablation identifies as most important is consistently the one both gate variants down-weight most, and the feature ablation identifies as least important is the one both gate variants favor most. Full numbers are reported in [Results : Gating vs. Ablation](#gating-vs-ablation).
 
 ---
 
@@ -43,7 +41,7 @@ Excitatory gain is held fixed rather than inferred, since it trades off against 
 
 ### EEG Forward Model
 
-Cortical source activity is projected to scalp EEG using a lead field computed from MNE-Python's fsaverage template head model, with the source placed in visual cortex. Rather than collapsing to a single channel, the 5 electrodes with the highest sensitivity to the source are auto-selected, and the signal is projected to each using its **signed** lead-field gain, preserving realistic scalp topography (including sign inversion across electrode pairs) instead of forcing every channel to the same polarity.
+Cortical source activity is projected to scalp EEG using a lead field computed from MNE-Python's fsaverage template head model, with the source placed in visual cortex. Rather than collapsing to a single channel, the 5 electrodes with the highest sensitivity to the source are auto-selected, and the signal is projected to each using its **signed** lead-field gain, preserving realistic scalp topography (including sign inversion across electrode pairs).
 
 ### Observation Noise
 
@@ -74,7 +72,7 @@ To test whether the learned gate is a trustworthy importance signal, this projec
 
 ### Density Estimator
 
-The posterior p(θ | x) is learned with Sequential Neural Posterior Estimation (SNPE-C) via the [sbi](https://github.com/sbi-dev/sbi) library, using a Neural Spline Flow (5 transforms, 125 hidden units) trained on 32,768 simulations drawn from a Sobol quasi-random sequence for more uniform prior coverage than independent sampling. This simulation budget was chosen from a compute-efficiency sweep across four budgets (8,192 / 16,384 / 32,768 / 65,536): accuracy keeps improving beyond this point, but training time grows faster than the accuracy gain.
+The posterior p(θ | x) is learned with Sequential Neural Posterior Estimation (SNPE-C) via the [sbi](https://github.com/sbi-dev/sbi) library, using a Neural Spline Flow (5 transforms, 125 hidden units) trained on 32,768 simulations drawn from a Sobol quasi-random sequence for more uniform prior coverage than independent sampling. 
 
 ---
 
@@ -93,8 +91,6 @@ Does the underlying SBI pipeline recover parameters accurately and with well-cal
 | κ (time constant) | 0.720 | 0.157 | 0.826 |
 | g (inhibitory gain) | 0.921 | 0.086 | 0.891 |
 | **Mean** | **0.793** | **0.132** | **0.871** |
-
-g is the best-recovered parameter; κ is the most challenging and also the only parameter with below-nominal credible-interval coverage, indicating a mild calibration gap.
 
 **Cost of gating** — does adding a gate hurt the pipeline's own accuracy?
 
